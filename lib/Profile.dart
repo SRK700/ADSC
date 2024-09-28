@@ -2,8 +2,11 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'welcome.dart';
-import 'Dashboard.dart';
+import 'Login.dart';
+import 'Dashboard5.dart';
+import 'EditProfile.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProfileWidget extends StatefulWidget {
   final String email;
@@ -16,11 +19,13 @@ class ProfileWidget extends StatefulWidget {
 
 class _ProfileWidgetState extends State<ProfileWidget> {
   String userName = 'กำลังโหลด...';
+  String agency = ''; // เก็บหน่วยงานของผู้ใช้
 
   @override
   void initState() {
     super.initState();
     _getUserData(widget.email);
+    _getAgency(); // ดึงข้อมูล agency จาก SharedPreferences
   }
 
   Future<void> _getUserData(String email) async {
@@ -48,6 +53,25 @@ class _ProfileWidgetState extends State<ProfileWidget> {
       setState(() {
         userName = 'เกิดข้อผิดพลาด';
       });
+    }
+  }
+
+  // ดึงข้อมูล agency จาก SharedPreferences
+  Future<void> _getAgency() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      agency = prefs.getString('agency') ?? ''; // ดึง agency ที่เก็บไว้
+    });
+  }
+
+  // ฟังก์ชันสำหรับเปิดลิงก์เพื่อเพิ่มบัญชี LINE OA
+  Future<void> _connectLineOA() async {
+    const String lineAddFriendUrl = 'https://line.me/R/ti/p/@068cfgom';
+
+    if (await canLaunch(lineAddFriendUrl)) {
+      await launch(lineAddFriendUrl);
+    } else {
+      throw 'ไม่สามารถเปิดลิงก์ $lineAddFriendUrl';
     }
   }
 
@@ -84,8 +108,10 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                     Navigator.pushReplacement(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            DashboardWidget(email: widget.email),
+                        builder: (context) => DashboardWidget(
+                          email: widget.email,
+                          agency: agency, // ส่งค่า agency กลับไปยัง Dashboard
+                        ),
                       ),
                     );
                   },
@@ -119,6 +145,17 @@ class _ProfileWidgetState extends State<ProfileWidget> {
             ),
           ),
           Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+            child: Text(
+              agency, // แสดงหน่วยงานที่ได้จาก API
+              style: const TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Color(0xFF57636C),
+              ),
+            ),
+          ),
+          Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24),
             child: Text(
               widget.email,
@@ -143,28 +180,33 @@ class _ProfileWidgetState extends State<ProfileWidget> {
             icon: Icons.account_circle_outlined,
             title: 'แก้ไขข้อมูลผู้ใช้',
             onTap: () {
-              // Implement navigation to Edit Profile
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfileWidget(
+                    email: widget.email, // ส่งอีเมลไปยังหน้าแก้ไขโปรไฟล์
+                  ),
+                ),
+              );
             },
           ),
           buildMenuItem(
             context,
             icon: FontAwesomeIcons.line,
-            title: 'เชื่อมต่อกับ LINE',
-            onTap: () {
-              // Implement LINE connection
-            },
+            title: 'รับการแจ้งเตือนผ่าน LINE',
+            onTap: _connectLineOA, // เชื่อมต่อกับ LINE OA เพื่อเพิ่มเพื่อน
           ),
           Center(
             child: Padding(
               padding: const EdgeInsets.symmetric(vertical: 16),
               child: ElevatedButton(
-                onPressed: () {
-                  // Navigate back to Welcome screen
+                onPressed: () async {
+                  final prefs = await SharedPreferences.getInstance();
+                  await prefs.remove('userEmail'); // ลบข้อมูลอีเมลที่เก็บไว้
+
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) =>
-                            WelcomeWidget()), // ใช้ WelcomeWidget ที่ถูกต้อง
+                    MaterialPageRoute(builder: (context) => LoginPage()),
                   );
                 },
                 style: ElevatedButton.styleFrom(

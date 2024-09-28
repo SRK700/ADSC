@@ -1,12 +1,12 @@
-// NotificationItem.dart
 import 'package:flutter/material.dart';
+//import 'ConfirmAccident.dart'; // Import the ConfirmAccident page
 
 class NotificationItem extends StatelessWidget {
   final String title;
   final String cameraLocation;
   final String dateTime;
   final String status;
-  final VoidCallback onTap;
+  final VoidCallback onTap; // This will handle the tap event
 
   const NotificationItem({
     Key? key,
@@ -26,17 +26,17 @@ class NotificationItem extends StatelessWidget {
         child: Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(8.0),
+            borderRadius: BorderRadius.circular(12.0),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
-                blurRadius: 4,
-                offset: Offset(0, 2),
+                blurRadius: 6,
+                offset: Offset(0, 3),
               ),
             ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(12.0),
+            padding: const EdgeInsets.all(16.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -56,7 +56,7 @@ class NotificationItem extends StatelessWidget {
                     color: Colors.blue,
                   ),
                 ),
-                SizedBox(height: 4),
+                SizedBox(height: 8),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -68,7 +68,7 @@ class NotificationItem extends StatelessWidget {
                       ),
                     ),
                     ElevatedButton(
-                      onPressed: onTap,
+                      onPressed: onTap, // Handles tap event
                       style: ElevatedButton.styleFrom(
                         primary: Colors.blue,
                         shape: RoundedRectangleBorder(

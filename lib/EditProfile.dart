@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 
 class EditProfileWidget extends StatefulWidget {
-  const EditProfileWidget({Key? key}) : super(key: key);
+  final String email;
+
+  const EditProfileWidget({Key? key, required this.email}) : super(key: key);
 
   @override
   State<EditProfileWidget> createState() => _EditProfileWidgetState();
@@ -10,11 +14,82 @@ class EditProfileWidget extends StatefulWidget {
 class _EditProfileWidgetState extends State<EditProfileWidget> {
   final _formKey = GlobalKey<FormState>();
 
-  final TextEditingController _prefixNameController = TextEditingController();
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
+  late TextEditingController _prefixNameController;
+  late TextEditingController _firstNameController;
+  late TextEditingController _lastNameController;
+  late TextEditingController _phoneController;
+  late TextEditingController _emailController;
+
+  @override
+  void initState() {
+    super.initState();
+    _prefixNameController = TextEditingController();
+    _firstNameController = TextEditingController();
+    _lastNameController = TextEditingController();
+    _phoneController = TextEditingController();
+    _emailController = TextEditingController(text: widget.email);
+
+    _fetchUserData();
+  }
+
+  Future<void> _fetchUserData() async {
+    final response = await http.get(
+      Uri.parse('http://localhost:81/adscAPI/user.php?email=${widget.email}'),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+
+      setState(() {
+        _prefixNameController.text = data['prefix'] ?? '';
+        _firstNameController.text = data['first_name'] ?? '';
+        _lastNameController.text = data['last_name'] ?? '';
+        _phoneController.text = data['phone'] ?? '';
+      });
+    } else {
+      print('Failed to load user data');
+    }
+  }
+
+  Future<void> _saveProfileChanges() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final response = await http.put(
+      Uri.parse('http://localhost:81/adscAPI/user.php'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'email': widget.email,
+        'prefix': _prefixNameController.text,
+        'first_name': _firstNameController.text,
+        'last_name': _lastNameController.text,
+        'phone': _phoneController.text,
+      }),
+    );
+
+    print(response.body); // พิมพ์ response.body เพื่อตรวจสอบ
+
+    if (response.statusCode == 200) {
+      try {
+        final data = jsonDecode(response.body);
+        if (data['message'] == 'User updated successfully') {
+          Navigator.pop(context);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error: ${data['message']}')),
+          );
+        }
+      } catch (e) {
+        print('Error parsing JSON: $e');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Invalid response format: $e')),
+        );
+      }
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save changes')),
+      );
+    }
+  }
 
   @override
   void dispose() {
@@ -32,7 +107,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
       appBar: AppBar(
         backgroundColor: Colors.white,
         elevation: 0,
-        title: Text(
+        title: const Text(
           'แก้ไขข้อมูลส่วนตัว',
           style: TextStyle(color: Colors.black),
         ),
@@ -48,75 +123,44 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
             key: _formKey,
             child: Column(
               children: [
-                // Profile Image
-                Center(
-                  child: GestureDetector(
-                    onTap: () async {
-                      // Implement image picking logic here
-                    },
-                    child: CircleAvatar(
-                      radius: 50,
-                      backgroundImage: NetworkImage(
-                        'https://images.unsplash.com/photo-1489980557514-251d61e3eeb6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8OTZ8fHByb2ZpbGV8ZW58MHx8MHx8&auto=format&fit=crop&w=900&q=60',
-                      ),
-                      backgroundColor: Colors.grey[300],
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
                 // Prefix Name Input
                 _buildTextField(
                   controller: _prefixNameController,
                   labelText: 'คำนำหน้าชื่อ',
                 ),
-
                 const SizedBox(height: 16),
-
                 // First Name Input
                 _buildTextField(
                   controller: _firstNameController,
                   labelText: 'ชื่อ',
                 ),
-
                 const SizedBox(height: 16),
-
                 // Last Name Input
                 _buildTextField(
                   controller: _lastNameController,
                   labelText: 'นามสกุล',
                 ),
-
                 const SizedBox(height: 16),
-
                 // Phone Input
                 _buildTextField(
                   controller: _phoneController,
                   labelText: 'เบอร์โทรศัพท์',
                   keyboardType: TextInputType.phone,
                 ),
-
                 const SizedBox(height: 16),
-
-                // Email Input
+                // Email Input (Disabled)
                 _buildTextField(
                   controller: _emailController,
                   labelText: 'อีเมล',
                   keyboardType: TextInputType.emailAddress,
+                  enabled: false, // ปิดการแก้ไขอีเมล
                 ),
-
                 const SizedBox(height: 24),
-
                 // Save Button
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
-                    onPressed: () {
-                      if (_formKey.currentState!.validate()) {
-                        // Save profile changes
-                        Navigator.pop(context);
-                      }
-                    },
+                    onPressed: _saveProfileChanges,
                     style: ElevatedButton.styleFrom(
                       primary: Colors.blue,
                       padding: const EdgeInsets.symmetric(vertical: 16),
@@ -142,6 +186,7 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
     required TextEditingController controller,
     required String labelText,
     TextInputType keyboardType = TextInputType.text,
+    bool enabled = true,
   }) {
     return TextFormField(
       controller: controller,
@@ -152,10 +197,11 @@ class _EditProfileWidgetState extends State<EditProfileWidget> {
           borderRadius: BorderRadius.circular(8),
         ),
         filled: true,
-        fillColor: Colors.white,
+        fillColor: enabled ? Colors.white : Colors.grey[200],
         contentPadding:
             const EdgeInsets.symmetric(vertical: 20, horizontal: 20),
       ),
+      enabled: enabled,
       validator: (value) {
         if (value == null || value.isEmpty) {
           return 'กรุณากรอก$labelText';

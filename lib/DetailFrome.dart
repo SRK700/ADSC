@@ -1,24 +1,37 @@
+import 'dart:convert'; // นำเข้าการจัดการ JSON
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // นำเข้า SharedPreferences
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
 
 class DetailsFormWidget extends StatefulWidget {
-  const DetailsFormWidget({super.key});
+  final int notificationId; // รับค่า notificationId
+
+  const DetailsFormWidget({super.key, required this.notificationId});
 
   @override
   State<DetailsFormWidget> createState() => _DetailsFormWidgetState();
 }
 
 class _DetailsFormWidgetState extends State<DetailsFormWidget> {
-  final scaffoldKey = GlobalKey<ScaffoldState>();
   final _formKey = GlobalKey<FormState>();
   String? selectedReason;
   TextEditingController? detailsController;
+  String? agency; // เก็บข้อมูลหน่วยงานที่ดึงมาจาก SharedPreferences
 
   @override
   void initState() {
     super.initState();
     detailsController = TextEditingController();
+    _loadAgency(); // โหลดค่า agency จาก SharedPreferences
+  }
+
+  Future<void> _loadAgency() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      agency = prefs.getString('agency'); // ดึง agency จาก SharedPreferences
+    });
   }
 
   @override
@@ -27,10 +40,41 @@ class _DetailsFormWidgetState extends State<DetailsFormWidget> {
     super.dispose();
   }
 
+  Future<void> _saveAccidentDetails() async {
+    if (_formKey.currentState?.validate() ?? false) {
+      // ทำการบันทึกข้อมูล โดยส่ง agency และ notificationId ไปใน request ด้วย
+      final details = detailsController?.text;
+      final reason = selectedReason;
+
+      // ส่งข้อมูลไปยัง API บันทึกเหตุผล
+      final response = await http.post(
+        Uri.parse(
+            'http://192.168.1.246:5000/save-accident-reason'), // แทนที่ด้วย URL ของ API จริง
+        body: json.encode({
+          'notification_id':
+              widget.notificationId, // ใช้ notificationId จาก widget
+          'reason': reason,
+          'details': details,
+          'agency': agency, // ใช้ค่า agency จาก SharedPreferences
+        }),
+        headers: {'Content-Type': 'application/json'},
+      );
+
+      if (response.statusCode == 200) {
+        // แสดงผลลัพธ์เมื่อบันทึกสำเร็จ
+        Navigator.of(context).pop(); // ปิดฟอร์มเมื่อบันทึกเสร็จสิ้น
+      } else {
+        // แสดงข้อผิดพลาดเมื่อบันทึกไม่สำเร็จ
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to save accident reason')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      key: scaffoldKey,
       backgroundColor: Colors.white,
       appBar: AppBar(
         backgroundColor: Colors.white,
@@ -73,7 +117,7 @@ class _DetailsFormWidgetState extends State<DetailsFormWidget> {
                       'ขับด้วยความเร็ว',
                       'หลับใน',
                       'ตัดหน้ากระชั้นชิด',
-                      'ฝ่าฝืนสํญญานไฟจราจร',
+                      'ฝ่าฝืนสัญญาณไฟจราจร',
                       'ทัศนวิสัยไม่ดี',
                       'โทรศัพท์ขณะขับขี่',
                       'บรรทุกเกิน',
@@ -104,13 +148,8 @@ class _DetailsFormWidgetState extends State<DetailsFormWidget> {
                   ),
                   SizedBox(height: 24),
                   Center(
-                    // ใช้ Center เพื่อจัดปุ่มให้อยู่ตรงกลาง
                     child: ElevatedButton.icon(
-                      onPressed: () {
-                        if (_formKey.currentState?.validate() ?? false) {
-                          // Handle form submission
-                        }
-                      },
+                      onPressed: _saveAccidentDetails,
                       icon: FaIcon(FontAwesomeIcons.solidSave, size: 15),
                       label: Text(
                         'บันทึก',

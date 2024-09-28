@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'Dashboard.dart';
+import 'Dashboard5.dart'; // Import your dashboard page
+import 'CreateAccount.dart'; // Import your registration page
 
 class LoginPage extends StatefulWidget {
   @override
@@ -37,31 +38,131 @@ class _LoginPageState extends State<LoginPage> {
 
         if (data['message'] == 'Login successful') {
           final prefs = await SharedPreferences.getInstance();
+          // เก็บข้อมูลที่ได้จากการล็อกอินลงใน SharedPreferences
           await prefs.setString('userEmail', email);
+          await prefs.setString('agency', data['user']['agency']);
+          await prefs.setString('firstName', data['user']['first_name']);
+          await prefs.setString('lastName', data['user']['last_name']);
+          await prefs.setString('status', data['user']['status']);
 
-          Navigator.pushReplacement(
+          // ตรวจสอบสถานะผู้ใช้ (รออนุมัติหรือระงับ)
+          if (data['user']['status'] == 'รออนุมัติ' ||
+              data['user']['status'] == 'ระงับ') {
+            _showCustomDialog(
+              context,
+              'ไม่สามารถเข้าใช้งานได้',
+              'บัญชีของคุณยังไม่ถูกอนุมัติหรือถูกระงับ',
+              Icons.error_outline,
+              Colors.orange,
+            );
+            return;
+          }
+
+          // Show custom dialog for success
+          _showCustomDialog(
             context,
-            MaterialPageRoute(
-              builder: (context) => DashboardWidget(email: email),
-            ),
+            'ล็อกอินสำเร็จ!',
+            'ยินดีต้อนรับสู่ระบบ',
+            Icons.check_circle,
+            Colors.green,
           );
+
+          // Navigate to Dashboard after a slight delay
+          Future.delayed(const Duration(seconds: 2), () {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => DashboardWidget(
+                  email: email,
+                  agency: data['user']['agency'],
+                ),
+              ),
+            );
+          });
         } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(data['message'])),
+          // Show custom dialog for failure
+          _showCustomDialog(
+            context,
+            'ล็อกอินไม่สำเร็จ!',
+            'โปรดลองอีกครั้ง',
+            Icons.error_outline,
+            Colors.red,
           );
         }
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-              content: Text(
-                  'Error: ${response.statusCode} ${response.reasonPhrase}')),
+        _showCustomDialog(
+          context,
+          'ข้อผิดพลาด!',
+          'Error: ${response.statusCode} ${response.reasonPhrase}',
+          Icons.error_outline,
+          Colors.red,
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+      _showCustomDialog(
+        context,
+        'เกิดข้อผิดพลาด!',
+        'กรุณาลองใหม่อีกครั้ง',
+        Icons.error_outline,
+        Colors.red,
       );
     }
+  }
+
+  void _showCustomDialog(BuildContext context, String title, String message,
+      IconData icon, Color iconColor) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          contentPadding: EdgeInsets.all(20),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 50, color: iconColor),
+              SizedBox(height: 20),
+              Text(
+                title,
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.bold,
+                  color: iconColor,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                message,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black54,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                style: ElevatedButton.styleFrom(
+                  primary: iconColor,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: const Text(
+                  'ตกลง',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 
   @override
@@ -215,14 +316,20 @@ class _LoginPageState extends State<LoginPage> {
                           ),
                           TextButton(
                             onPressed: () {
-                              // Handle password recovery
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => CreateAccountWidget(),
+                                ),
+                              );
                             },
                             child: Text(
-                              'ลืมรหัสผ่าน',
+                              'ลงทะเบียน',
                               style: GoogleFonts.getFont(
                                 'Plus Jakarta Sans',
-                                color: Colors.grey[600],
-                                fontSize: 14,
+                                color: Colors.blue,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),
