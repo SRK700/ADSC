@@ -5,11 +5,12 @@ import 'dart:convert';
 import 'Profile.dart';
 import 'NotificationList.dart';
 import 'Login.dart';
+import 'AccidentStatistics.dart';
 import 'AccidentReportList.dart'; // Import the AccidentReportList widget
 
 class DashboardWidget extends StatefulWidget {
   final String email;
-  final String agency; // Include the 'agency' parameter
+  final String agency;
 
   const DashboardWidget({required this.email, required this.agency, Key? key})
       : super(key: key);
@@ -20,17 +21,44 @@ class DashboardWidget extends StatefulWidget {
 
 class _DashboardWidgetState extends State<DashboardWidget> {
   bool showConfirmed = false;
-  List<Map<String, dynamic>> topReasons = []; // To store top reasons data
-  String userName = ''; // To store the user's name
+  List<Map<String, dynamic>> topReasons = [];
+  String userName = '';
+  String? _selectedAgency;
+  String? _selectedCameraLocation;
+
+  List<String> _agencies = [];
+  List<String> _cameraLocations = [];
 
   @override
   void initState() {
     super.initState();
-    _fetchTopReasons(); // Call the fetch function to get statistics
-    _fetchUserName(); // Fetch the user's name
+    _fetchTopReasons();
+    _fetchUserName();
+    _fetchFilters(); // Fetch agencies and camera locations for filtering
     Future.delayed(Duration.zero, () async {
       await _checkLoginStatus();
     });
+  }
+
+  // Fetch filters (agencies and camera locations) from the API
+  Future<void> _fetchFilters() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:81/adscAPI/get-filters.php'),
+      );
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        setState(() {
+          _agencies = List<String>.from(data['agencies']);
+          _cameraLocations = List<String>.from(data['camera_locations']);
+        });
+      } else {
+        print('Failed to load filters');
+      }
+    } catch (e) {
+      print('Error fetching filters: $e');
+    }
   }
 
   // Fetch top reasons from API
@@ -63,7 +91,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
-          userName = data['first_name'] ?? ''; // Adjust based on API's response
+          userName = data['first_name'] ?? '';
         });
       } else {
         print('Failed to load user data');
@@ -77,7 +105,6 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     final prefs = await SharedPreferences.getInstance();
     final email = prefs.getString('userEmail');
 
-    // If no email, assume user is not logged in
     if (email == null) {
       Navigator.pushReplacement(
         context,
@@ -142,14 +169,11 @@ class _DashboardWidgetState extends State<DashboardWidget> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Display the dynamic statistics section
               _buildStatSection(),
               const SizedBox(height: 20),
-
-              // Check agency and decide which section to display
               widget.agency == 'หน่วยงานที่เกี่ยวข้อง'
-                  ? _buildAccidentReportSection() // Show Accident Report List
-                  : _buildNotificationSection(), // Show Notification List for other agencies
+                  ? _buildAccidentReportSection()
+                  : _buildNotificationSection(),
             ],
           ),
         ),
@@ -157,7 +181,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     );
   }
 
-  // Build the dynamic statistics section using ListView.builder
+  // Dynamic statistics section
   Widget _buildStatSection() {
     if (topReasons.isEmpty) {
       return Center(
@@ -186,11 +210,65 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     );
   }
 
-  // Build each stat card
   Widget _buildStatCard(String count, String label) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => AccidentStatistics(),
+          ),
+        );
+      },
+      child: Container(
+        width: 150,
+        margin: const EdgeInsets.symmetric(horizontal: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 6,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                count,
+                style: const TextStyle(
+                  fontFamily: 'Outfit',
+                  color: Color(0xFF14181B),
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Flexible(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontFamily: 'Roboto',
+                    color: Color(0xFF57636C),
+                    fontSize: 16,
+                  ),
+                  softWrap: true,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAccidentReportSection() {
     return Container(
-      width: 150,
-      margin: const EdgeInsets.symmetric(horizontal: 8),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -208,25 +286,56 @@ class _DashboardWidgetState extends State<DashboardWidget> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              count,
-              style: const TextStyle(
-                fontFamily: 'Outfit',
-                color: Color(0xFF14181B),
-                fontSize: 40,
+              'รายงานสาเหตุอุบัติเหตุ',
+              style: TextStyle(
+                fontSize: 22,
                 fontWeight: FontWeight.bold,
+                color: Color(0xFF101213),
               ),
             ),
-            const SizedBox(height: 10),
-            Flexible(
-              child: Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: 'Roboto',
-                  color: Color(0xFF57636C),
-                  fontSize: 16,
+            const SizedBox(height: 12),
+
+            // Filter options placed here
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                DropdownButton<String>(
+                  hint: Text('เลือกหน่วยงาน'),
+                  value: _selectedAgency,
+                  items: _agencies.map((agency) {
+                    return DropdownMenuItem<String>(
+                      value: agency,
+                      child: Text(agency),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedAgency = value;
+                    });
+                  },
                 ),
-                softWrap: true,
-              ),
+                DropdownButton<String>(
+                  hint: Text('เลือกสถานที่ตั้งกล้อง'),
+                  value: _selectedCameraLocation,
+                  items: _cameraLocations.map((location) {
+                    return DropdownMenuItem<String>(
+                      value: location,
+                      child: Text(location),
+                    );
+                  }).toList(),
+                  onChanged: (value) {
+                    setState(() {
+                      _selectedCameraLocation = value;
+                    });
+                  },
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            // Pass the selected filters to AccidentReportList
+            AccidentReportList(
+              selectedAgency: _selectedAgency,
+              selectedCameraLocation: _selectedCameraLocation,
             ),
           ],
         ),
@@ -234,7 +343,6 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     );
   }
 
-  // Build the notification section for police or rescue agencies
   Widget _buildNotificationSection() {
     return Container(
       decoration: BoxDecoration(
@@ -286,42 +394,6 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     );
   }
 
-  // Build the accident report section for 'หน่วยงานที่เกี่ยวข้อง'
-  Widget _buildAccidentReportSection() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 6,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'รายงานสาเหตุอุบัติเหตุ',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: Color(0xFF101213),
-              ),
-            ),
-            const SizedBox(height: 12),
-            AccidentReportList(), // Use the new AccidentReportList widget
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Build toggle buttons for filtering notifications
   Widget _buildToggleButton(
       String label, bool isActive, VoidCallback onPressed) {
     return ElevatedButton(

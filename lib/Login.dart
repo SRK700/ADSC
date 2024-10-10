@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'Dashboard5.dart'; // Import your dashboard page
 import 'CreateAccount.dart'; // Import your registration page
+import 'ForgotPasswordPage.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -36,9 +37,11 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
+        // เพิ่มการพิมพ์ผลลัพธ์ที่ได้รับจาก API เพื่อตรวจสอบ
+        print('API Response: $data');
+
         if (data['message'] == 'Login successful') {
           final prefs = await SharedPreferences.getInstance();
-          // เก็บข้อมูลที่ได้จากการล็อกอินลงใน SharedPreferences
           await prefs.setString('userEmail', email);
           await prefs.setString('agency', data['user']['agency']);
           await prefs.setString('firstName', data['user']['first_name']);
@@ -48,10 +51,14 @@ class _LoginPageState extends State<LoginPage> {
           // ตรวจสอบสถานะผู้ใช้ (รออนุมัติหรือระงับ)
           if (data['user']['status'] == 'รออนุมัติ' ||
               data['user']['status'] == 'ระงับ') {
+            String statusMessage = data['user']['status'] == 'รออนุมัติ'
+                ? 'บัญชีของคุณยังอยู่ในสถานะรอการอนุมัติ'
+                : 'บัญชีของคุณถูกระงับการใช้งาน กรุณาติดต่อเจ้าหน้าที่';
+
             _showCustomDialog(
               context,
               'ไม่สามารถเข้าใช้งานได้',
-              'บัญชีของคุณยังไม่ถูกอนุมัติหรือถูกระงับ',
+              statusMessage, // แสดงข้อความตามสถานะของผู้ใช้
               Icons.error_outline,
               Colors.orange,
             );
@@ -79,8 +86,25 @@ class _LoginPageState extends State<LoginPage> {
               ),
             );
           });
+        } else if (data['message'] == 'Invalid email or password') {
+          _showCustomDialog(
+            context,
+            'ล็อกอินไม่สำเร็จ!',
+            'อีเมลหรือรหัสผ่านไม่ถูกต้อง โปรดลองอีกครั้ง',
+            Icons.error_outline,
+            Colors.red,
+          );
+        } else if (data['message'] == 'Account not approved or suspended') {
+          // เพิ่มการตรวจสอบและแสดงผลสถานะที่ส่งมาจาก API
+          _showCustomDialog(
+            context,
+            'ไม่สามารถเข้าใช้งานได้',
+            data['status'] ??
+                'บัญชีของคุณยังอยู่ในสถานะรอการอนุมัติหรือถูกระงับการใช้งาน',
+            Icons.error_outline,
+            Colors.orange,
+          );
         } else {
-          // Show custom dialog for failure
           _showCustomDialog(
             context,
             'ล็อกอินไม่สำเร็จ!',
@@ -311,6 +335,26 @@ class _LoginPageState extends State<LoginPage> {
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
+                              ),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      ForgotPasswordPage(), // Navigate to the forgot password page
+                                ),
+                              );
+                            },
+                            child: Text(
+                              'ลืมรหัสผ่าน?',
+                              style: GoogleFonts.getFont(
+                                'Plus Jakarta Sans',
+                                color: Color.fromARGB(255, 235, 115, 106),
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
                               ),
                             ),
                           ),

@@ -18,20 +18,38 @@ class _DetailsFormWidgetState extends State<DetailsFormWidget> {
   final _formKey = GlobalKey<FormState>();
   String? selectedReason;
   TextEditingController? detailsController;
-  String? agency; // เก็บข้อมูลหน่วยงานที่ดึงมาจาก SharedPreferences
+  String? agency;
+  bool isReasonAdded = false; // เพิ่มตัวแปรเพื่อตรวจสอบสถานะ
 
   @override
   void initState() {
     super.initState();
     detailsController = TextEditingController();
-    _loadAgency(); // โหลดค่า agency จาก SharedPreferences
+    _loadAgency();
+    _checkIfReasonAdded(); // ตรวจสอบสถานะ is_reason_added
   }
 
   Future<void> _loadAgency() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      agency = prefs.getString('agency'); // ดึง agency จาก SharedPreferences
+      agency = prefs.getString('agency');
     });
+  }
+
+  // ฟังก์ชันเพื่อตรวจสอบ is_reason_added จาก API
+  Future<void> _checkIfReasonAdded() async {
+    final response = await http.get(Uri.parse(
+        'http://192.168.1.247:5000/get_notification_details?id=${widget.notificationId}'));
+    if (response.statusCode == 200) {
+      final data = json.decode(response.body);
+      setState(() {
+        isReasonAdded = data['is_reason_added'] == 1;
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to fetch notification details')),
+      );
+    }
   }
 
   @override
@@ -42,29 +60,23 @@ class _DetailsFormWidgetState extends State<DetailsFormWidget> {
 
   Future<void> _saveAccidentDetails() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // ทำการบันทึกข้อมูล โดยส่ง agency และ notificationId ไปใน request ด้วย
       final details = detailsController?.text;
       final reason = selectedReason;
 
-      // ส่งข้อมูลไปยัง API บันทึกเหตุผล
       final response = await http.post(
-        Uri.parse(
-            'http://192.168.1.246:5000/save-accident-reason'), // แทนที่ด้วย URL ของ API จริง
+        Uri.parse('http://192.168.1.247:5000/save-accident-reason'),
         body: json.encode({
-          'notification_id':
-              widget.notificationId, // ใช้ notificationId จาก widget
+          'notification_id': widget.notificationId,
           'reason': reason,
           'details': details,
-          'agency': agency, // ใช้ค่า agency จาก SharedPreferences
+          'agency': agency,
         }),
         headers: {'Content-Type': 'application/json'},
       );
 
       if (response.statusCode == 200) {
-        // แสดงผลลัพธ์เมื่อบันทึกสำเร็จ
-        Navigator.of(context).pop(); // ปิดฟอร์มเมื่อบันทึกเสร็จสิ้น
+        Navigator.of(context).pop();
       } else {
-        // แสดงข้อผิดพลาดเมื่อบันทึกไม่สำเร็จ
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to save accident reason')),
         );
@@ -149,7 +161,9 @@ class _DetailsFormWidgetState extends State<DetailsFormWidget> {
                   SizedBox(height: 24),
                   Center(
                     child: ElevatedButton.icon(
-                      onPressed: _saveAccidentDetails,
+                      onPressed: isReasonAdded
+                          ? null
+                          : _saveAccidentDetails, // ปิดการใช้งานปุ่มถ้ามีสาเหตุแล้ว
                       icon: FaIcon(FontAwesomeIcons.solidSave, size: 15),
                       label: Text(
                         'บันทึก',
@@ -159,11 +173,10 @@ class _DetailsFormWidgetState extends State<DetailsFormWidget> {
                         ),
                       ),
                       style: ElevatedButton.styleFrom(
-                        minimumSize: Size(double.infinity, 48), // ปรับขนาดปุ่ม
+                        minimumSize: Size(double.infinity, 48),
                         primary: Color(0xFF6F61EF),
                         onPrimary: Colors.white,
-                        padding:
-                            EdgeInsets.symmetric(vertical: 16), // ปรับ padding
+                        padding: EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(60),
                         ),

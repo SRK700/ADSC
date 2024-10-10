@@ -35,13 +35,13 @@ class _ConfirmAccidentState extends State<ConfirmAccident> {
   Future<void> _fetchNotificationDetails() async {
     try {
       final response = await http.get(Uri.parse(
-          'http://10.10.36.226:5000/get_notification_details?id=${widget.notificationId}'));
+          'http://192.168.1.247:5000/get_notification_details?id=${widget.notificationId}'));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         setState(() {
           notificationDetails = data;
-          videoUrl = 'http://10.10.36.226:5000/${data['video_path']}';
+          videoUrl = 'http://192.168.1.247:5000/${data['video_path']}';
           _isLoading = false;
         });
 
@@ -81,7 +81,7 @@ class _ConfirmAccidentState extends State<ConfirmAccident> {
   Future<void> confirmNotification() async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.10.36.226:5000/update-status'),
+        Uri.parse('http://192.168.1.247:5000/update-status'),
         body: json.encode({
           'id': widget.notificationId,
           'status': 'confirmed',
@@ -103,7 +103,7 @@ class _ConfirmAccidentState extends State<ConfirmAccident> {
   Future<void> deleteNotification() async {
     try {
       final response = await http.delete(
-        Uri.parse('http://10.10.36.226:5000/delete-notification'),
+        Uri.parse('http://192.168.1.247:5000/delete-notification'),
         body: json.encode({
           'id': widget.notificationId,
         }),

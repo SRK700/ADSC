@@ -1,11 +1,14 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:http/http.dart' as http;
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'Login.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:path/path.dart';
 import 'Dashboard5.dart';
 import 'EditProfile.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'Login.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class ProfileWidget extends StatefulWidget {
@@ -19,13 +22,15 @@ class ProfileWidget extends StatefulWidget {
 
 class _ProfileWidgetState extends State<ProfileWidget> {
   String userName = 'กำลังโหลด...';
-  String agency = ''; // เก็บหน่วยงานของผู้ใช้
+  String agency = '';
+  String? _profileImageUrl; // URL สำหรับรูปโปรไฟล์จาก API
+  File? _profileImage;
 
   @override
   void initState() {
     super.initState();
     _getUserData(widget.email);
-    _getAgency(); // ดึงข้อมูล agency จาก SharedPreferences
+    _getAgency();
   }
 
   Future<void> _getUserData(String email) async {
@@ -37,7 +42,12 @@ class _ProfileWidgetState extends State<ProfileWidget> {
         final data = jsonDecode(response.body);
         if (data.isNotEmpty && data.containsKey('first_name')) {
           setState(() {
-            userName = data['first_name']; // ใช้ชื่อผู้ใช้ที่ได้จาก API
+            userName = data['first_name'];
+            // นำ URL ของรูปภาพจาก API และส่งไปที่ image_proxy.php
+            if (data['images'] != null && data['images'].isNotEmpty) {
+              _profileImageUrl =
+                  'http://localhost:81/adscAPI/image_proxy.php?url=${data['images']}';
+            }
           });
         } else {
           setState(() {
@@ -56,15 +66,63 @@ class _ProfileWidgetState extends State<ProfileWidget> {
     }
   }
 
-  // ดึงข้อมูล agency จาก SharedPreferences
   Future<void> _getAgency() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      agency = prefs.getString('agency') ?? ''; // ดึง agency ที่เก็บไว้
+      agency = prefs.getString('agency') ?? '';
     });
   }
 
-  // ฟังก์ชันสำหรับเปิดลิงก์เพื่อเพิ่มบัญชี LINE OA
+  Future<void> _pickImage() async {
+    final pickedFile =
+        await ImagePicker().pickImage(source: ImageSource.gallery);
+
+    if (pickedFile != null) {
+      setState(() {
+        _profileImage = File(pickedFile.path);
+      });
+      await _uploadImage(_profileImage!);
+    }
+  }
+
+  Future<void> _uploadImage(File imageFile) async {
+    final uri = Uri.parse('http://localhost:81/adscAPI/upload.php');
+    final request = http.MultipartRequest('POST', uri);
+
+    // Add image file
+    request.files.add(
+      await http.MultipartFile.fromPath(
+        'profile_image',
+        imageFile.path,
+        filename: basename(imageFile.path),
+      ),
+    );
+
+    // Add email to request
+    request.fields['email'] = widget.email;
+
+    try {
+      final response = await request.send();
+      if (response.statusCode == 200) {
+        final responseData = await http.Response.fromStream(response);
+        final responseJson = jsonDecode(responseData.body);
+
+        if (responseJson['status'] == 'success') {
+          print('Upload successful');
+          setState(() {
+            // Perform any additional actions after successful upload, e.g., updating UI
+          });
+        } else {
+          print('Upload failed: ${responseJson['message']}');
+        }
+      } else {
+        print('Upload failed with status code: ${response.statusCode}');
+      }
+    } catch (e) {
+      print('Error uploading image: $e');
+    }
+  }
+
   Future<void> _connectLineOA() async {
     const String lineAddFriendUrl = 'https://line.me/R/ti/p/@068cfgom';
 
@@ -110,7 +168,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                       MaterialPageRoute(
                         builder: (context) => DashboardWidget(
                           email: widget.email,
-                          agency: agency, // ส่งค่า agency กลับไปยัง Dashboard
+                          agency: agency,
                         ),
                       ),
                     );
@@ -120,15 +178,23 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               Positioned(
                 left: 24,
                 bottom: 16,
-                child: CircleAvatar(
-                  radius: 45,
-                  backgroundColor: Colors.teal[300]!.withOpacity(0.4),
-                  child: CircleAvatar(
-                    radius: 42,
-                    backgroundImage: const NetworkImage(
-                      'https://images.unsplash.com/photo-1489980557514-251d61e3eeb6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8OTZ8fHByb2ZpbGV8ZW58MHx8MHx8&auto=format&fit=crop&w=900&q=60',
+                child: Stack(
+                  children: [
+                    CircleAvatar(
+                      radius: 45,
+                      backgroundColor: Colors.teal[300]!.withOpacity(0.4),
+                      child: CircleAvatar(
+                        radius: 42,
+                        backgroundImage: _profileImage != null
+                            ? FileImage(_profileImage!)
+                            : _profileImageUrl != null
+                                ? NetworkImage(_profileImageUrl!)
+                                : const NetworkImage(
+                                    'https://images.unsplash.com/photo-1489980557514-251d61e3eeb6?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8OTZ8fHByb2ZpbGV8ZW58MHx8MHx8&auto=format&fit=crop&w=900&q=60',
+                                  ) as ImageProvider,
+                      ),
                     ),
-                  ),
+                  ],
                 ),
               ),
             ],
@@ -136,7 +202,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Text(
-              userName, // แสดงชื่อผู้ใช้ที่ได้จาก API
+              userName,
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
@@ -147,7 +213,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: Text(
-              agency, // แสดงหน่วยงานที่ได้จาก API
+              agency,
               style: const TextStyle(
                 fontSize: 14,
                 fontWeight: FontWeight.bold,
@@ -179,22 +245,28 @@ class _ProfileWidgetState extends State<ProfileWidget> {
             context,
             icon: Icons.account_circle_outlined,
             title: 'แก้ไขข้อมูลผู้ใช้',
-            onTap: () {
-              Navigator.push(
+            onTap: () async {
+              // เปิดหน้า EditProfile และรอผลลัพธ์
+              final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
                   builder: (context) => EditProfileWidget(
-                    email: widget.email, // ส่งอีเมลไปยังหน้าแก้ไขโปรไฟล์
+                    email: widget.email,
                   ),
                 ),
               );
+
+              // ถ้าแก้ไขข้อมูลเสร็จ ให้รีเฟรชข้อมูลในหน้า Profile
+              if (result == true) {
+                _getUserData(widget.email);
+              }
             },
           ),
           buildMenuItem(
             context,
             icon: FontAwesomeIcons.line,
             title: 'รับการแจ้งเตือนผ่าน LINE',
-            onTap: _connectLineOA, // เชื่อมต่อกับ LINE OA เพื่อเพิ่มเพื่อน
+            onTap: _connectLineOA,
           ),
           Center(
             child: Padding(
@@ -202,7 +274,7 @@ class _ProfileWidgetState extends State<ProfileWidget> {
               child: ElevatedButton(
                 onPressed: () async {
                   final prefs = await SharedPreferences.getInstance();
-                  await prefs.remove('userEmail'); // ลบข้อมูลอีเมลที่เก็บไว้
+                  await prefs.remove('userEmail');
 
                   Navigator.pushReplacement(
                     context,
