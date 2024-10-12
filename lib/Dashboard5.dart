@@ -6,7 +6,7 @@ import 'Profile.dart';
 import 'NotificationList.dart';
 import 'Login.dart';
 import 'AccidentStatistics.dart';
-import 'AccidentReportList.dart'; // Import the AccidentReportList widget
+import 'AccidentReportList.dart';
 
 class DashboardWidget extends StatefulWidget {
   final String email;
@@ -34,13 +34,12 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     super.initState();
     _fetchTopReasons();
     _fetchUserName();
-    _fetchFilters(); // Fetch agencies and camera locations for filtering
+    _fetchFilters();
     Future.delayed(Duration.zero, () async {
       await _checkLoginStatus();
     });
   }
 
-  // Fetch filters (agencies and camera locations) from the API
   Future<void> _fetchFilters() async {
     try {
       final response = await http.get(
@@ -61,7 +60,6 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     }
   }
 
-  // Fetch top reasons from API
   Future<void> _fetchTopReasons() async {
     try {
       final response = await http.get(
@@ -81,7 +79,6 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     }
   }
 
-  // Fetch the user's name based on the email
   Future<void> _fetchUserName() async {
     try {
       final response = await http.get(
@@ -127,7 +124,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
           style: TextStyle(
             fontFamily: 'Roboto',
             color: Color(0xFF14181B),
-            fontSize: 26,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
         ),
@@ -138,7 +135,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 userName.isNotEmpty ? ' $userName' : '',
                 style: const TextStyle(
                   color: Color(0xFF4B39EF),
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -146,7 +143,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 icon: const Icon(
                   Icons.account_circle_outlined,
                   color: Color(0xFF4B39EF),
-                  size: 30,
+                  size: 28,
                 ),
                 onPressed: () {
                   Navigator.pushReplacement(
@@ -165,12 +162,12 @@ class _DashboardWidgetState extends State<DashboardWidget> {
       ),
       body: SingleChildScrollView(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(12.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               _buildStatSection(),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
               widget.agency == 'หน่วยงานที่เกี่ยวข้อง'
                   ? _buildAccidentReportSection()
                   : _buildNotificationSection(),
@@ -181,14 +178,13 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     );
   }
 
-  // Dynamic statistics section
   Widget _buildStatSection() {
     if (topReasons.isEmpty) {
       return Center(
         child: Text(
           'ไม่มีสถิติที่จะแสดง',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 16,
             color: Colors.grey,
           ),
         ),
@@ -196,7 +192,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     }
 
     return SizedBox(
-      height: 150,
+      height: 140,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         itemCount: topReasons.length,
@@ -221,21 +217,25 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         );
       },
       child: Container(
-        width: 150,
+        width: 140,
         margin: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          color: Colors.white,
+          gradient: LinearGradient(
+            colors: [Color(0xFF6A1B9A), Color(0xFFAB47BC)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1),
+              color: Colors.black.withOpacity(0.15),
               blurRadius: 6,
-              offset: const Offset(0, 2),
+              offset: const Offset(0, 3),
             ),
           ],
         ),
         child: Padding(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.all(14),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -243,19 +243,19 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 count,
                 style: const TextStyle(
                   fontFamily: 'Outfit',
-                  color: Color(0xFF14181B),
-                  fontSize: 40,
+                  color: Colors.white,
+                  fontSize: 36,
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 8),
               Flexible(
                 child: Text(
                   label,
                   style: const TextStyle(
                     fontFamily: 'Roboto',
-                    color: Color(0xFF57636C),
-                    fontSize: 16,
+                    color: Colors.white,
+                    fontSize: 14,
                   ),
                   softWrap: true,
                 ),
@@ -281,21 +281,19 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'รายงานสาเหตุอุบัติเหตุ',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF101213),
               ),
             ),
-            const SizedBox(height: 12),
-
-            // Filter options placed here
+            const SizedBox(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -331,8 +329,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            // Pass the selected filters to AccidentReportList
+            const SizedBox(height: 10),
             AccidentReportList(
               selectedAgency: _selectedAgency,
               selectedCameraLocation: _selectedCameraLocation,
@@ -357,19 +354,19 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(12),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               'แจ้งเตือนอุบัติเหตุ',
               style: TextStyle(
-                fontSize: 22,
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Color(0xFF101213),
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
@@ -386,8 +383,11 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                 }),
               ],
             ),
-            const SizedBox(height: 12),
-            NotificationList(showConfirmed: showConfirmed),
+            const SizedBox(height: 10),
+            NotificationList(
+              showConfirmed: showConfirmed,
+              email: widget.email,
+            ),
           ],
         ),
       ),
@@ -400,15 +400,17 @@ class _DashboardWidgetState extends State<DashboardWidget> {
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
         primary: isActive ? Color(0xFF4B39EF) : Colors.grey,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(18),
         ),
+        shadowColor: Colors.black.withOpacity(0.25),
+        elevation: 3,
       ),
       child: Text(
         label,
         style: const TextStyle(
-          fontSize: 16,
+          fontSize: 14,
           color: Colors.white,
         ),
       ),

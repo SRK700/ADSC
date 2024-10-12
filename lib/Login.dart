@@ -37,8 +37,8 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        // เพิ่มการพิมพ์ผลลัพธ์ที่ได้รับจาก API เพื่อตรวจสอบ
-        print('API Response: $data');
+        // ไม่ควรพิมพ์ข้อมูลทั้งหมดใน console เพื่อความปลอดภัย
+        // ลบการพิมพ์ข้อมูลทั้งหมดใน API Response: print('API Response: $data');
 
         if (data['message'] == 'Login successful') {
           final prefs = await SharedPreferences.getInstance();

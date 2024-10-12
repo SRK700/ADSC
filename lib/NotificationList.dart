@@ -7,9 +7,13 @@ import 'package:intl/intl.dart';
 
 class NotificationList extends StatefulWidget {
   final bool showConfirmed;
+  final String email; // Add email parameter to identify the user
 
-  const NotificationList({Key? key, required this.showConfirmed})
-      : super(key: key);
+  const NotificationList({
+    Key? key,
+    required this.showConfirmed,
+    required this.email,
+  }) : super(key: key);
 
   @override
   _NotificationListState createState() => _NotificationListState();
@@ -76,10 +80,12 @@ class _NotificationListState extends State<NotificationList> {
         } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
           return Center(child: Text('ไม่มีรายการแจ้งเตือน'));
         } else {
-          // Filter notifications based on their status
+          // Filter notifications based on their status and email
           final notifications = snapshot.data!.where((notification) {
             if (widget.showConfirmed) {
-              return notification['status'] == 'confirmed';
+              // แสดงเฉพาะการแจ้งเตือนที่เป็น confirmed และอีเมลของผู้ใช้ปัจจุบันเท่านั้น
+              return notification['status'] == 'confirmed' &&
+                  notification['confirmed_by'] == widget.email;
             } else {
               return notification['status'] == 'pending';
             }
@@ -108,35 +114,66 @@ class _NotificationListState extends State<NotificationList> {
                         borderRadius: BorderRadius.circular(15.0),
                       ),
                       elevation: 3,
+                      shadowColor: Colors.black.withOpacity(0.2),
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text(
-                              'ตรวจพบเหตุการณ์ซึ่งสันนิษฐานว่าเป็นอุบัติเหตุ',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black,
-                              ),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.warning_amber_rounded,
+                                  color: Colors.orangeAccent,
+                                  size: 24,
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'ตรวจพบเหตุการณ์ซึ่งสันนิษฐานว่าเป็นอุบัติเหตุ',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black,
+                                  ),
+                                ),
+                              ],
                             ),
-                            const SizedBox(height: 8),
-                            Text(
-                              notification['camera_location'],
-                              style: TextStyle(
-                                fontSize: 15,
-                                color: Colors.deepPurple,
-                                fontWeight: FontWeight.bold,
-                              ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.location_on,
+                                  color: Colors.deepPurple,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  notification['camera_location'],
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.deepPurple,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 4),
-                            Text(
-                              formatDateTime(notification['cut_timestamp']),
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Colors.grey.shade800,
-                              ),
+                            Row(
+                              children: [
+                                Icon(
+                                  Icons.access_time,
+                                  color: Colors.grey.shade800,
+                                  size: 20,
+                                ),
+                                SizedBox(width: 4),
+                                Text(
+                                  formatDateTime(notification['cut_timestamp']),
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey.shade800,
+                                  ),
+                                ),
+                              ],
                             ),
                             const SizedBox(height: 12),
                             // Show the reason tag only if a reason is added
@@ -156,7 +193,7 @@ class _NotificationListState extends State<NotificationList> {
                                   ),
                                 ),
                               ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 16),
                             Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -202,7 +239,7 @@ class _NotificationListState extends State<NotificationList> {
                                         : Colors.blue.shade600,
                                     padding: const EdgeInsets.symmetric(
                                       horizontal: 20,
-                                      vertical: 10,
+                                      vertical: 12,
                                     ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(30),
@@ -232,19 +269,18 @@ class _NotificationListState extends State<NotificationList> {
                                     child: Text(
                                       'เพิ่มสาเหตุ',
                                       style: TextStyle(
-                                        fontSize: 14,
+                                        fontSize: 16,
                                         fontWeight: FontWeight.w600,
                                         color: Colors.white,
                                       ),
                                     ),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: reasonTag != null
-                                          ? Colors
-                                              .grey // Change color if disabled
+                                          ? Colors.grey
                                           : Color.fromARGB(255, 237, 46, 237),
                                       padding: const EdgeInsets.symmetric(
                                         horizontal: 20,
-                                        vertical: 10,
+                                        vertical: 12,
                                       ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(30),

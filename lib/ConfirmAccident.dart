@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
+import 'package:shared_preferences/shared_preferences.dart'; // Import SharedPreferences
 
 class ConfirmAccident extends StatefulWidget {
   final int notificationId;
@@ -80,11 +81,16 @@ class _ConfirmAccidentState extends State<ConfirmAccident> {
 
   Future<void> confirmNotification() async {
     try {
+      // ดึงอีเมลจาก SharedPreferences
+      SharedPreferences prefs = await SharedPreferences.getInstance();
+      final userEmail = prefs.getString('userEmail') ?? '';
+
       final response = await http.post(
         Uri.parse('http://192.168.1.247:5000/update-status'),
         body: json.encode({
           'id': widget.notificationId,
           'status': 'confirmed',
+          'confirmed_by': userEmail, // ส่ง email ของผู้ใช้ที่ทำการยืนยัน
         }),
         headers: {'Content-Type': 'application/json'},
       );
