@@ -39,7 +39,7 @@ class _DetailsFormWidgetState extends State<DetailsFormWidget> {
   // ฟังก์ชันเพื่อตรวจสอบ is_reason_added จาก API
   Future<void> _checkIfReasonAdded() async {
     final response = await http.get(Uri.parse(
-        'http://192.168.1.247:5000/get_notification_details?id=${widget.notificationId}'));
+        'http://10.10.58.123:5000/get_notification_details?id=${widget.notificationId}'));
     if (response.statusCode == 200) {
       final data = json.decode(response.body);
       setState(() {
@@ -64,7 +64,7 @@ class _DetailsFormWidgetState extends State<DetailsFormWidget> {
       final reason = selectedReason;
 
       final response = await http.post(
-        Uri.parse('http://192.168.1.247:5000/save-accident-reason'),
+        Uri.parse('http://10.10.58.123:5000/save-accident-reason'),
         body: json.encode({
           'notification_id': widget.notificationId,
           'reason': reason,

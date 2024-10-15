@@ -20,7 +20,7 @@ class _HistoryPageState extends State<HistoryPage> {
     try {
       final response = await http.get(
         Uri.parse(
-            'http://192.168.1.247:5000/get-history'), // เปลี่ยนเป็น URL ของ API จริง
+            'http://10.10.58.123:5000/get-history'), // เปลี่ยนเป็น URL ของ API จริง
       );
 
       if (response.statusCode == 200) {

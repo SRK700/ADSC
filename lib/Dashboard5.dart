@@ -7,12 +7,18 @@ import 'NotificationList.dart';
 import 'Login.dart';
 import 'AccidentStatistics.dart';
 import 'AccidentReportList.dart';
+import 'NotificationPage.dart'; // Import หน้าแจ้งเตือน
 
 class DashboardWidget extends StatefulWidget {
   final String email;
   final String agency;
+  final int notificationCount; // เพิ่มตัวแปรรับค่า notificationCount
 
-  const DashboardWidget({required this.email, required this.agency, Key? key})
+  const DashboardWidget(
+      {required this.email,
+      required this.agency,
+      required this.notificationCount, // รับค่า notificationCount
+      Key? key})
       : super(key: key);
 
   @override
@@ -25,6 +31,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
   String userName = '';
   String? _selectedAgency;
   String? _selectedCameraLocation;
+  int _selectedIndex = 0; // เพิ่มตัวแปรสำหรับการควบคุมการนำทาง
 
   List<String> _agencies = [];
   List<String> _cameraLocations = [];
@@ -115,8 +122,65 @@ class _DashboardWidgetState extends State<DashboardWidget> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF1F4F8),
-      appBar: AppBar(
+      appBar: _buildAppBar(), // ปรับ AppBar ตามหน้าที่เลือก
+      body: _buildBodyContent(), // ใช้ฟังก์ชันเพื่อแสดงผลหน้าตามที่เลือก
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: _selectedIndex,
+        onTap: (index) {
+          setState(() {
+            _selectedIndex = index;
+          });
+        },
+        items: [
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.dashboard),
+            label: 'หน้าหลัก',
+          ),
+          BottomNavigationBarItem(
+            icon: Stack(
+              children: [
+                const Icon(Icons.notifications),
+                if (widget.notificationCount >
+                    0) // แสดง Badge เมื่อ count มากกว่า 0
+                  Positioned(
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.all(1),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.all(Radius.circular(10)),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        '${widget.notificationCount}',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            label: 'แจ้งเตือน',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.person),
+            label: 'โปรไฟล์',
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ปรับ AppBar ตามหน้าที่เลือก
+  AppBar _buildAppBar() {
+    if (_selectedIndex == 0) {
+      return AppBar(
         backgroundColor: Colors.white,
         automaticallyImplyLeading: false,
         title: const Text(
@@ -159,20 +223,64 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         ],
         centerTitle: false,
         elevation: 0,
-      ),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildStatSection(),
-              const SizedBox(height: 16),
-              widget.agency == 'หน่วยงานที่เกี่ยวข้อง'
-                  ? _buildAccidentReportSection()
-                  : _buildNotificationSection(),
-            ],
+      );
+    } else if (_selectedIndex == 1) {
+      return AppBar(
+        backgroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'แจ้งเตือน',
+          style: TextStyle(
+            fontFamily: 'Roboto',
+            color: Color(0xFF14181B),
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
           ),
+        ),
+        centerTitle: true,
+      );
+    } else {
+      return AppBar(
+        backgroundColor: Colors.white,
+        automaticallyImplyLeading: false,
+        title: const Text(
+          'โปรไฟล์',
+          style: TextStyle(
+            fontFamily: 'Roboto',
+            color: Color(0xFF14181B),
+            fontSize: 22,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      );
+    }
+  }
+
+  // ฟังก์ชันนี้จะแสดงหน้าตามที่เลือกจาก bottom navigation
+  Widget _buildBodyContent() {
+    if (_selectedIndex == 0) {
+      return _buildDashboardContent(); // แสดงหน้าหลัก
+    } else if (_selectedIndex == 1) {
+      return NotificationPage(); // แสดงหน้าแจ้งเตือน
+    } else {
+      return ProfileWidget(email: widget.email); // แสดงหน้าโปรไฟล์
+    }
+  }
+
+  Widget _buildDashboardContent() {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(12.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildStatSection(),
+            const SizedBox(height: 16),
+            widget.agency == 'หน่วยงานที่เกี่ยวข้อง'
+                ? _buildAccidentReportSection()
+                : _buildNotificationSection(),
+          ],
         ),
       ),
     );
@@ -220,7 +328,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         width: 140,
         margin: const EdgeInsets.symmetric(horizontal: 8),
         decoration: BoxDecoration(
-          gradient: LinearGradient(
+          gradient: const LinearGradient(
             colors: [Color(0xFF6A1B9A), Color(0xFFAB47BC)],
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
@@ -285,7 +393,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'รายงานสาเหตุอุบัติเหตุ',
               style: TextStyle(
                 fontSize: 20,
@@ -298,7 +406,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 DropdownButton<String>(
-                  hint: Text('เลือกหน่วยงาน'),
+                  hint: const Text('เลือกหน่วยงาน'),
                   value: _selectedAgency,
                   items: _agencies.map((agency) {
                     return DropdownMenuItem<String>(
@@ -313,7 +421,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
                   },
                 ),
                 DropdownButton<String>(
-                  hint: Text('เลือกสถานที่ตั้งกล้อง'),
+                  hint: const Text('เลือกสถานที่ตั้งกล้อง'),
                   value: _selectedCameraLocation,
                   items: _cameraLocations.map((location) {
                     return DropdownMenuItem<String>(
@@ -358,7 +466,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
+            const Text(
               'แจ้งเตือนอุบัติเหตุ',
               style: TextStyle(
                 fontSize: 20,
@@ -399,7 +507,7 @@ class _DashboardWidgetState extends State<DashboardWidget> {
     return ElevatedButton(
       onPressed: onPressed,
       style: ElevatedButton.styleFrom(
-        primary: isActive ? Color(0xFF4B39EF) : Colors.grey,
+        primary: isActive ? const Color(0xFF4B39EF) : Colors.grey,
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(18),

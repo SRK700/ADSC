@@ -169,6 +169,8 @@ class _ProfileWidgetState extends State<ProfileWidget> {
                         builder: (context) => DashboardWidget(
                           email: widget.email,
                           agency: agency,
+                          notificationCount:
+                              5, // แก้ไขให้ส่งค่า notificationCount ด้วย
                         ),
                       ),
                     );

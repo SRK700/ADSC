@@ -37,9 +37,6 @@ class _LoginPageState extends State<LoginPage> {
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
 
-        // ไม่ควรพิมพ์ข้อมูลทั้งหมดใน console เพื่อความปลอดภัย
-        // ลบการพิมพ์ข้อมูลทั้งหมดใน API Response: print('API Response: $data');
-
         if (data['message'] == 'Login successful') {
           final prefs = await SharedPreferences.getInstance();
           await prefs.setString('userEmail', email);
@@ -58,7 +55,7 @@ class _LoginPageState extends State<LoginPage> {
             _showCustomDialog(
               context,
               'ไม่สามารถเข้าใช้งานได้',
-              statusMessage, // แสดงข้อความตามสถานะของผู้ใช้
+              statusMessage,
               Icons.error_outline,
               Colors.orange,
             );
@@ -74,6 +71,9 @@ class _LoginPageState extends State<LoginPage> {
             Colors.green,
           );
 
+          // สมมุติว่าคุณมีการเรียก API ที่จะดึง notificationCount มาได้จาก backend หรือฐานข้อมูล
+          int notificationCount = 5; // สามารถแทนที่ด้วยค่าจาก API หรือฐานข้อมูล
+
           // Navigate to Dashboard after a slight delay
           Future.delayed(const Duration(seconds: 2), () {
             Navigator.pushReplacement(
@@ -82,6 +82,8 @@ class _LoginPageState extends State<LoginPage> {
                 builder: (context) => DashboardWidget(
                   email: email,
                   agency: data['user']['agency'],
+                  notificationCount:
+                      notificationCount, // ส่ง notificationCount ไปยัง DashboardWidget
                 ),
               ),
             );
@@ -95,7 +97,6 @@ class _LoginPageState extends State<LoginPage> {
             Colors.red,
           );
         } else if (data['message'] == 'Account not approved or suspended') {
-          // เพิ่มการตรวจสอบและแสดงผลสถานะที่ส่งมาจาก API
           _showCustomDialog(
             context,
             'ไม่สามารถเข้าใช้งานได้',

@@ -22,8 +22,8 @@ class NotificationList extends StatefulWidget {
 class _NotificationListState extends State<NotificationList> {
   // Fetch notifications from the API
   Future<List<dynamic>> fetchNotifications() async {
-    final response = await http
-        .get(Uri.parse('http://192.168.1.247:5000/get-notifications'));
+    final response =
+        await http.get(Uri.parse('http://10.10.58.123:5000/get-notifications'));
 
     if (response.statusCode == 200) {
       return json.decode(response.body);
@@ -35,7 +35,7 @@ class _NotificationListState extends State<NotificationList> {
   Future<String?> fetchReason(int notificationId) async {
     final response = await http.get(
       Uri.parse(
-          'http://192.168.1.247:5000/get-reason?notification_id=$notificationId'),
+          'http://10.10.58.123:5000/get-reason?notification_id=$notificationId'),
     );
 
     if (response.statusCode == 200) {
